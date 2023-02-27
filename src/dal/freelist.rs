@@ -1,7 +1,5 @@
-
-
-use byteorder::{ByteOrder, BigEndian};
 use crate::dal::consts::PAGE_NUM_SIZE;
+use byteorder::{BigEndian, ByteOrder};
 
 pub struct Freelist {
     pub max_page: u64,

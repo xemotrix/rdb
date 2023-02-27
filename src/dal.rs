@@ -1,12 +1,16 @@
+mod consts;
 mod freelist;
 mod meta;
-mod consts;
+mod node;
 
 use anyhow::Result;
 use freelist::Freelist;
 use meta::{Meta, META_PAGE_NUM};
 use std::fs::File;
-use std::io::{Seek, SeekFrom, prelude::{Read, Write}};
+use std::io::{
+    prelude::{Read, Write},
+    Seek, SeekFrom,
+};
 use std::path::Path;
 
 extern crate page_size;
@@ -26,50 +30,45 @@ pub struct Dal {
 
 impl Dal {
     pub fn new(path: &str) -> Dal {
-
         let file_existed = Path::new(path).exists();
 
         let file = File::options()
             .write(true)
             .read(true)
             .create(true)
-            .open(path) 
-            .unwrap_or_else(|err|{
-                panic!("Error opening file {path}: {err}")
-            });
+            .open(path)
+            .unwrap_or_else(|err| panic!("Error opening file {path}: {err}"));
 
-        let mut dal = Dal { 
-            file, 
+        let mut dal = Dal {
+            file,
             page_size: page_size::get(),
             freelist: Freelist::new(),
             meta: Meta::new(),
         };
 
-        match file_existed{
+        match file_existed {
             true => {
-                dal.meta = dal.read_meta().unwrap_or_else(|err|{
-                    panic!("Error reading meta: {err}")
-                });
-                dal.freelist = dal.read_freelist().unwrap_or_else(|err|{
-                    panic!("Error reading freelist: {err}")
-                });
-            },
+                dal.meta = dal
+                    .read_meta()
+                    .unwrap_or_else(|err| panic!("Error reading meta: {err}"));
+                dal.freelist = dal
+                    .read_freelist()
+                    .unwrap_or_else(|err| panic!("Error reading freelist: {err}"));
+            }
             false => {
                 dal.freelist = Freelist::new();
                 dal.meta.freelist_page = dal.freelist.get_next_page();
-                dal.write_freelist().unwrap_or_else(|err|{
-                    panic!("Error writing freelist: {err}")
-                });            
-                dal.write_meta().unwrap_or_else(|err|{
-                    panic!("Error writing meta: {err}")
-                });
-            },
+                dal.write_freelist()
+                    .unwrap_or_else(|err| panic!("Error writing freelist: {err}"));
+                dal.write_meta()
+                    .unwrap_or_else(|err| panic!("Error writing meta: {err}"));
+            }
         }
         dal
     }
 
     pub fn allocate_empty_page(&self) -> Page {
-        Page{
+        Page {
             num: 0,
             data: vec![0; self.page_size],
         }
@@ -84,7 +83,6 @@ impl Dal {
     }
 
     pub fn write_page(&mut self, page: &Page) -> Result<()> {
-        println!("->Writing page: {:?}", page.num);
         let offset = page.num * self.page_size as u64;
         self.file.seek(SeekFrom::Start(offset))?;
         self.file.write_all(&page.data)?;
@@ -95,7 +93,6 @@ impl Dal {
         let mut page = self.allocate_empty_page();
         page.num = META_PAGE_NUM;
         self.meta.serialize(&mut page.data);
-        println!("Writing meta: {:?}", page.num);
         self.write_page(&page)?;
         Ok(page)
     }
@@ -111,7 +108,6 @@ impl Dal {
         let mut page = self.allocate_empty_page();
         page.num = self.meta.freelist_page;
         self.freelist.serialize(&mut page.data);
-        println!("Writing freelist: {:?}", page.num);
         self.write_page(&page)?;
         self.meta.freelist_page = page.num;
         Ok(page)
@@ -124,6 +120,3 @@ impl Dal {
         Ok(freelist)
     }
 }
-
-
-

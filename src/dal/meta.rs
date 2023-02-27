@@ -1,5 +1,5 @@
-use byteorder::{ByteOrder, BigEndian};
 use crate::dal::consts::PAGE_NUM_SIZE;
+use byteorder::{BigEndian, ByteOrder};
 
 pub const META_PAGE_NUM: u64 = 0;
 
@@ -24,5 +24,4 @@ impl Meta {
         self.freelist_page = BigEndian::read_u64(&buf[pos..]);
         pos += PAGE_NUM_SIZE;
     }
-
 }
